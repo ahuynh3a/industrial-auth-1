@@ -1,6 +1,6 @@
 class CommentsController < ApplicationController
   before_action :set_comment, only: %i[ show edit update destroy ]
-  before_action :is_an_authorized_user, only: [:create]
+  before_action :authorize_comment, only: [:edit, :update, :destroy]
 
   # GET /comments or /comments.json
   def index
@@ -22,7 +22,9 @@ class CommentsController < ApplicationController
 
   # POST /comments or /comments.json
   def create
+    @photo = Photo.find(params[:comment][:photo_id])
     @comment = Comment.new(comment_params)
+    authorize @photo, :show?
     @comment.author = current_user
 
     respond_to do |format|
@@ -69,10 +71,7 @@ class CommentsController < ApplicationController
       params.require(:comment).permit(:author_id, :photo_id, :body)
     end
 
-    def is_an_authorized_user
-      @photo = Photo.find(params.fetch(:comment).fetch(:photo_id))
-      if current_user != @photo.owner && @photo.owner.private? && !current_user.leaders.include?(@photo.owner)
-        redirect_back fallback_location: root_url, alert: "Not authorized"
-      end
+    def authorize_comment
+      authorize @comment
     end
 end
